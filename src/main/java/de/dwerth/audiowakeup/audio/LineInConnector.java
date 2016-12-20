@@ -16,7 +16,7 @@ public class LineInConnector implements IAudioInput {
     private String mixerName;
     private int signalThreshold;
 
-    private List<String> lastSignals = Collections.synchronizedList(new LinkedList<>());
+    private List<String> lastSignals = Collections.synchronizedList(new LinkedList<String>());
 
     public LineInConnector(String mixerName, int signalThreshold) {
         this.mixerName = mixerName;
