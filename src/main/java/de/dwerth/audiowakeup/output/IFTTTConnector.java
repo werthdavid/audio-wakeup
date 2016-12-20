@@ -1,6 +1,5 @@
-package de.dwerth.audiowakeup.ifttt;
+package de.dwerth.audiowakeup.output;
 
-import de.dwerth.audiowakeup.output.IWakeupOutput;
 import org.apache.log4j.Logger;
 
 import java.io.BufferedReader;
@@ -13,16 +12,23 @@ public class IFTTTConnector implements IWakeupOutput {
     private static final Logger log = Logger.getLogger(IFTTTConnector.class);
     private String makerUrl;
 
+    private long lastTriggerWakeupTS;
+
     public IFTTTConnector(String makerUrl) {
         this.makerUrl = makerUrl;
     }
 
     @Override
     public void triggerWakeup() {
-        try {
-            sendGet(makerUrl);
-        } catch (Exception e) {
-            log.error("Could not trigger IFTTT: " + e.getMessage());
+        long now = System.currentTimeMillis();
+        // Only trigger once a minute
+        if (now - lastTriggerWakeupTS > (60 * 1000)) {
+            try {
+                sendGet(makerUrl);
+            } catch (Exception e) {
+                log.error("Could not trigger IFTTT: " + e.getMessage());
+            }
+            lastTriggerWakeupTS = now;
         }
     }
 

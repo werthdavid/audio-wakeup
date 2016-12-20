@@ -1,7 +1,6 @@
-package de.dwerth.audiowakeup.hyperion;
+package de.dwerth.audiowakeup.output;
 
 import de.dwerth.audiowakeup.main.WiringComponent;
-import de.dwerth.audiowakeup.output.IWakeupOutput;
 import org.apache.log4j.Logger;
 
 import java.io.BufferedReader;
@@ -20,7 +19,8 @@ public class HyperionConnector implements IWakeupOutput {
     private ReentrantLock lock = new ReentrantLock();
     private int brightness = 0;
     private boolean clearCommandSent = false;
-    private BufferedReader in = null;
+    private BufferedReader inputStreamReader = null;
+    private long lastSendTS = 0;
 
     private int priority;
     private String serverHost;
@@ -42,20 +42,27 @@ public class HyperionConnector implements IWakeupOutput {
     }
 
     public void increaseBrightness() {
-        brightness++;
-        send("{ \"color\": [" + brightness + "," + brightness + "," + brightness + "], \"command\": \"color\", \"priority\": " + priority + " }");
-
+        if (brightness < 255) {
+            brightness += 1;
+            send("{ \"color\": [" + brightness + "," + brightness + "," + brightness + "], \"command\": \"color\", \"priority\": " + priority + " }");
+        }
     }
+
 
     public void sendClear() {
         send("{\"command\":\"clear\",\"priority\":" + priority + "}");
+        brightness = 0;
     }
 
     private void send(String command) {
         lock.lock();
         try {
+            if (!connected) {
+                connect();
+            }
             if (connected) {
                 try {
+                    lastSendTS = System.currentTimeMillis();
                     socket.getOutputStream().write((command + "\n").getBytes());
                     log.info("Sending: " + command);
                 } catch (IOException e) {
@@ -63,7 +70,7 @@ public class HyperionConnector implements IWakeupOutput {
                     e.printStackTrace();
                 }
             } else {
-                log.warn("Not connected");
+                log.warn("Not sending command to hyperion: not connected");
             }
         } finally {
             lock.unlock();
@@ -74,11 +81,12 @@ public class HyperionConnector implements IWakeupOutput {
         Thread t = new Thread() {
             public void run() {
                 while (true) {
-                    if (!connected) {
-                        connect();
+                    // Disconnect if inactive for more than 2 mins
+                    if (connected && System.currentTimeMillis() - lastSendTS > (2 * 60 * 1000)) {
+                        disconnect();
                     }
                     try {
-                        Thread.sleep(2000);
+                        Thread.sleep(60 * 1000);
                     } catch (InterruptedException e) {
                         e.printStackTrace();
                     }
@@ -92,15 +100,14 @@ public class HyperionConnector implements IWakeupOutput {
         Thread t = new Thread() {
             public void run() {
                 while (true) {
-                    if (connected) {
-                        if (WiringComponent.getInstance().shouldIncreaseBrightness()) {
-                            increaseBrightness();
-                            clearCommandSent = false;
-                        } else {
-                            if (!clearCommandSent) {
-                                sendClear();
-                                clearCommandSent = true;
-                            }
+                    if (WiringComponent.getInstance().shouldIncreaseBrightness()) {
+                        increaseBrightness();
+                        clearCommandSent = false;
+                    } else {
+                        if (!clearCommandSent && connected) {
+                            sendClear();
+                            clearCommandSent = true;
+                            brightness = 0;
                         }
                     }
                     try {
@@ -118,9 +125,9 @@ public class HyperionConnector implements IWakeupOutput {
         Thread t = new Thread() {
             public void run() {
                 while (true) {
-                    if (socket != null && connected && in != null) {
+                    if (socket != null && connected && inputStreamReader != null) {
                         try {
-                            log.debug("Hyperion response: " + in.readLine());
+                            log.debug("Hyperion response: " + inputStreamReader.readLine());
                         } catch (IOException e) {
                             e.printStackTrace();
                         }
@@ -137,11 +144,28 @@ public class HyperionConnector implements IWakeupOutput {
         return t;
     }
 
+    private void disconnect() {
+        try {
+            if (connected) {
+                sendClear();
+            }
+            if (socket != null) {
+                socket.close();
+            }
+        } catch (IOException e) {
+            e.printStackTrace();
+        } finally {
+            socket = null;
+            connected = false;
+            inputStreamReader = null;
+        }
+    }
+
     private void connect() {
         try {
             socket = new Socket(serverHost, serverPort);
             connected = true;
-            in = new BufferedReader(new InputStreamReader(socket.getInputStream()));
+            inputStreamReader = new BufferedReader(new InputStreamReader(socket.getInputStream()));
             serverInfo();
         } catch (ConnectException ce) {
             log.warn(ce.getMessage());

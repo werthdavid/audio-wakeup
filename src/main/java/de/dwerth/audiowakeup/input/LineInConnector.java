@@ -1,6 +1,5 @@
-package de.dwerth.audiowakeup.audio;
+package de.dwerth.audiowakeup.input;
 
-import de.dwerth.audiowakeup.input.IAudioInput;
 import de.dwerth.audiowakeup.main.WiringComponent;
 import org.apache.log4j.Logger;
 
@@ -62,7 +61,7 @@ public class LineInConnector implements IAudioInput {
     }
 
     public void pushSignal(String signal) {
-        if (lastSignals.size() > 0) {
+        if (lastSignals.size() == 10) {
             ListIterator<String> listIterator = lastSignals.listIterator(lastSignals.size() - 1);
             String lastSignal = listIterator.next();
             if (!lastSignal.equals(signal)) {
@@ -71,10 +70,6 @@ public class LineInConnector implements IAudioInput {
                 } else {
                     WiringComponent.getInstance().triggerWakeup();
                 }
-            }
-        } else {
-            if (signal.equals(FOUND)) {
-                WiringComponent.getInstance().triggerWakeup();
             }
         }
         if (lastSignals.size() >= 10) {

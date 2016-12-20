@@ -1,9 +1,10 @@
 package de.dwerth.audiowakeup.main;
 
 
-import de.dwerth.audiowakeup.audio.LineInConnector;
-import de.dwerth.audiowakeup.hyperion.HyperionConnector;
-import de.dwerth.audiowakeup.ifttt.IFTTTConnector;
+import de.dwerth.audiowakeup.input.LineInConnector;
+import de.dwerth.audiowakeup.output.HyperionConnector;
+import de.dwerth.audiowakeup.output.IFTTTConnector;
+import org.apache.log4j.Level;
 import org.apache.log4j.Logger;
 
 import java.io.File;
@@ -16,6 +17,7 @@ public class Main {
 
     public static void main(String[] args) {
         log.info("Starting up");
+
         Properties props = new Properties();
 
         File propsFile = new File("audio-wakeup.properties");
@@ -28,6 +30,7 @@ public class Main {
                 log.warn("Could not load Properties: " + e.getMessage());
             }
         }
+        log.setLevel(Level.toLevel(props.getProperty("log.level", "INFO")));
 
         LineInConnector lineInConnector = new LineInConnector(props.getProperty("mixer.name", "plughw:3,0"),
                 Integer.parseInt(props.getProperty("line.signalthreshold", "2000")));

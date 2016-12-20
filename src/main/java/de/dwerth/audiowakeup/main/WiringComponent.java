@@ -1,13 +1,16 @@
 package de.dwerth.audiowakeup.main;
 
 import de.dwerth.audiowakeup.input.IAudioInput;
+import de.dwerth.audiowakeup.output.IFTTTConnector;
 import de.dwerth.audiowakeup.output.IWakeupOutput;
+import org.apache.log4j.Logger;
 
 import java.util.ArrayList;
 import java.util.List;
 
 public class WiringComponent {
 
+    private static final Logger log = Logger.getLogger(WiringComponent.class);
     private final static WiringComponent instance = new WiringComponent();
 
     private List<IAudioInput> audioInputs = new ArrayList<>();
@@ -38,12 +41,14 @@ public class WiringComponent {
     }
 
     public void triggerWakeup() {
+        log.info("Triggering Wakeup");
         for (IWakeupOutput wakeupOutput : wakeupOutputs) {
             wakeupOutput.triggerWakeup();
         }
     }
 
     public void triggerWakeupDone() {
+        log.info("Triggering WakeupDone");
         for (IWakeupOutput wakeupOutput : wakeupOutputs) {
             wakeupOutput.triggerWakeupDone();
         }
