@@ -31,16 +31,15 @@ public class LineInConnector implements IAudioInput {
             Mixer m = AudioSystem.getMixer(mixerInfo);
             Line.Info[] lineInfos = m.getTargetLineInfo();
             for (Line.Info lineInfo : lineInfos) {
-                log.debug("\tLine: " + lineInfo.toString());
                 if (lineInfo.getLineClass().equals(TargetDataLine.class)) {
+                    log.debug("\tLine: " + lineInfo.toString());
                     try {
-                        out.put(mixerInfo.getName(), m.getLine(lineInfo));
+                        out.put(mixerInfo.getName() + ": " + lineInfo.toString(), m.getLine(lineInfo));
                     } catch (LineUnavailableException e) {
                         e.printStackTrace();
                     }
                 }
             }
-
         }
         return out;
     }
@@ -85,7 +84,6 @@ public class LineInConnector implements IAudioInput {
             public void run() {
                 TargetDataLine targetDataLine = (TargetDataLine) getLine();
                 if (targetDataLine != null) {
-                    log.info("Found line: " + targetDataLine.getLineInfo());
                     try {
                         targetDataLine.open();
                     } catch (LineUnavailableException e) {
@@ -103,7 +101,7 @@ public class LineInConnector implements IAudioInput {
                                 short thisValue = (short) (buffer[p] + (buffer[p + 1] << 8));
                                 if (thisValue > max) max = thisValue;
                             }
-//                            log.debug("Max value is " + max);
+                            log.debug("Line in signal: " + max);
                             if (max > signalThreshold) {
                                 pushSignal(FOUND);
                             } else {
@@ -128,6 +126,7 @@ public class LineInConnector implements IAudioInput {
             HashMap<String, Line> out = enumerateLines();
             for (String key : out.keySet()) {
                 if (key.contains(mixerName)) {
+                    log.info("Found Line: " + key);
                     return (TargetDataLine) out.get(key);
                 }
             }
