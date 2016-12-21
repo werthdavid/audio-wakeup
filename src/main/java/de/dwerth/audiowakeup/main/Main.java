@@ -2,6 +2,7 @@ package de.dwerth.audiowakeup.main;
 
 
 import de.dwerth.audiowakeup.input.LineInConnector;
+import de.dwerth.audiowakeup.output.CmdConnector;
 import de.dwerth.audiowakeup.output.HyperionConnector;
 import de.dwerth.audiowakeup.output.IFTTTConnector;
 import org.apache.log4j.Level;
@@ -43,6 +44,11 @@ public class Main {
         if (props.getProperty("ifttt.makerurl") != null) {
             IFTTTConnector iftttConnector = new IFTTTConnector(props.getProperty("ifttt.makerurl"));
             WiringComponent.getInstance().registerWakeupOutput(iftttConnector);
+        }
+
+        if (props.getProperty("cmd.wakeup") != null || props.getProperty("cmd.wakeupDone") != null) {
+            CmdConnector cmdConnector = new CmdConnector(props.getProperty("cmd.wakeup"), props.getProperty("cmd.wakeupDone"));
+            WiringComponent.getInstance().registerWakeupOutput(cmdConnector);
         }
     }
 }

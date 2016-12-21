@@ -28,7 +28,7 @@ cd audio-wakeup
 gradlew fatJar
 ```
 
-* Output will be in directory *audio-wakeup/build/libs/audio-wakeup-1.0-SNAPSHOT-all.jar*
+* Output will be in directory *audio-wakeup/build/libs/audio-wakeup-1.X.X-SNAPSHOT-all.jar*
 
 # Installation
 
