@@ -1,0 +1,16 @@
+[Unit]
+Description=Audio-Wakeup: Application that triggers Hyperion, IFTTT,... if a sound is played on your mobile phone
+After=syslog.target network-online.target
+
+[Service]
+Type=simple
+# Make sure user is part of audio group
+User=pi
+EnvironmentFile=/etc/default/audio-wakeup
+ExecStart=/usr/local/bin/audio-wakeup $AUDIOWAKEUP_OPTS
+Restart=on-failure
+RestartSec=10
+KillMode=process
+
+[Install]
+WantedBy=multi-user.target

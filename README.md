@@ -42,7 +42,15 @@ tbd.
 
 # Run as Service (systemd)
 
-tbd.
+Download the two files under src/main/resources/systemd and place audio-wakeup under /etc/default and audio-wakeup.service under /etc/systemd/system on your system.
+
+Enable and run the service:
+
+```
+systemctl daemon-reload
+systemctl enable homebridge
+systemctl start homebridge
+```
 
 # Configuration
 
