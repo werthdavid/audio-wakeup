@@ -48,8 +48,8 @@ Enable and run the service:
 
 ```
 systemctl daemon-reload
-systemctl enable homebridge
-systemctl start homebridge
+systemctl enable audio-wakeup
+systemctl start audio-wakeup
 ```
 
 # Configuration
