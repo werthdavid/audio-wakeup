@@ -1,10 +1,22 @@
 package de.dwerth.audiowakeup.input;
 
 import de.dwerth.audiowakeup.main.WiringComponent;
-import org.apache.log4j.Logger;
 
-import javax.sound.sampled.*;
-import java.util.*;
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.Iterator;
+import java.util.LinkedList;
+import java.util.List;
+import java.util.ListIterator;
+
+import javax.sound.sampled.AudioFormat;
+import javax.sound.sampled.AudioSystem;
+import javax.sound.sampled.Line;
+import javax.sound.sampled.LineUnavailableException;
+import javax.sound.sampled.Mixer;
+import javax.sound.sampled.TargetDataLine;
+
+import org.apache.log4j.Logger;
 
 public class LineInConnector implements IAudioInput {
 
@@ -60,10 +72,19 @@ public class LineInConnector implements IAudioInput {
     }
 
     public void pushSignal(String signal) {
+        if (lastSignals.size() >= 10) {
+            Iterator<String> iter = lastSignals.iterator();
+            iter.next();
+            iter.remove();
+        }
+        lastSignals.add(signal);
         if (lastSignals.size() == 10) {
-            ListIterator<String> listIterator = lastSignals.listIterator(lastSignals.size() - 1);
-            String lastSignal = listIterator.next();
-            if (!lastSignal.equals(signal)) {
+            ListIterator<String> listIterator = lastSignals.listIterator(6);
+            String lastSignal6 = listIterator.next();
+            String lastSignal7 = listIterator.next();
+            String lastSignal8 = listIterator.next();
+            String lastSignal9 = listIterator.next();
+            if (lastSignal7.equals(lastSignal8) && lastSignal7.equals(lastSignal9) && !lastSignal7.equals(lastSignal6)) {
                 if (signal.equals(NOT_FOUND)) {
                     WiringComponent.getInstance().triggerWakeupDone();
                 } else {
@@ -71,12 +92,6 @@ public class LineInConnector implements IAudioInput {
                 }
             }
         }
-        if (lastSignals.size() >= 10) {
-            Iterator<String> iter = lastSignals.iterator();
-            iter.next();
-            iter.remove();
-        }
-        lastSignals.add(signal);
     }
 
     public Thread getHandlerThread() {
