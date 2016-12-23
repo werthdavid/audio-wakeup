@@ -24,13 +24,13 @@ public class LineInConnector implements IAudioInput {
     private static final String FOUND = "FOUND";
     private static final String NOT_FOUND = "NOT_FOUND";
 
-    private String mixerName;
+    private String lineName;
     private int signalThreshold;
 
     private List<String> lastSignals = Collections.synchronizedList(new LinkedList<String>());
 
-    public LineInConnector(String mixerName, int signalThreshold) {
-        this.mixerName = mixerName;
+    public LineInConnector(String lineName, int signalThreshold) {
+        this.lineName = lineName;
         this.signalThreshold = signalThreshold;
         getHandlerThread().start();
     }
@@ -48,7 +48,7 @@ public class LineInConnector implements IAudioInput {
                     try {
                         out.put(mixerInfo.getName() + ": " + lineInfo.toString(), m.getLine(lineInfo));
                     } catch (LineUnavailableException e) {
-                        e.printStackTrace();
+                        log.error("Line Unavailable: " + e.getMessage());
                     }
                 }
             }
@@ -97,12 +97,12 @@ public class LineInConnector implements IAudioInput {
     public Thread getHandlerThread() {
         Thread t = new Thread() {
             public void run() {
-                TargetDataLine targetDataLine = (TargetDataLine) getLine();
+                TargetDataLine targetDataLine = getLine();
                 if (targetDataLine != null) {
                     try {
                         targetDataLine.open();
                     } catch (LineUnavailableException e) {
-                        e.printStackTrace();
+                        log.error("Line Unavailable: " + e.getMessage());
                     }
                     targetDataLine.start();
                     while (true) {
@@ -129,6 +129,8 @@ public class LineInConnector implements IAudioInput {
                             e.printStackTrace();
                         }
                     }
+                } else {
+                    log.error("No Line found!");
                 }
             }
         };
@@ -140,7 +142,7 @@ public class LineInConnector implements IAudioInput {
         try {
             HashMap<String, Line> out = enumerateLines();
             for (String key : out.keySet()) {
-                if (key.contains(mixerName)) {
+                if (key.contains(lineName)) {
                     log.info("Found Line: " + key);
                     return (TargetDataLine) out.get(key);
                 }

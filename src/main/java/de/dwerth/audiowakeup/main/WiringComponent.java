@@ -1,12 +1,12 @@
 package de.dwerth.audiowakeup.main;
 
 import de.dwerth.audiowakeup.input.IAudioInput;
-import de.dwerth.audiowakeup.output.IFTTTConnector;
 import de.dwerth.audiowakeup.output.IWakeupOutput;
-import org.apache.log4j.Logger;
 
 import java.util.ArrayList;
 import java.util.List;
+
+import org.apache.log4j.Logger;
 
 public class WiringComponent {
 

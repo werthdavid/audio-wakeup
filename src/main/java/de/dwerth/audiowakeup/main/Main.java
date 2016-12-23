@@ -5,12 +5,14 @@ import de.dwerth.audiowakeup.input.LineInConnector;
 import de.dwerth.audiowakeup.output.CmdConnector;
 import de.dwerth.audiowakeup.output.HyperionConnector;
 import de.dwerth.audiowakeup.output.IFTTTConnector;
-import org.apache.log4j.Level;
-import org.apache.log4j.Logger;
 
 import java.io.File;
 import java.io.FileInputStream;
 import java.util.Properties;
+
+import org.apache.log4j.Level;
+import org.apache.log4j.LogManager;
+import org.apache.log4j.Logger;
 
 public class Main {
 
@@ -31,10 +33,11 @@ public class Main {
                 log.warn("Could not load Properties: " + e.getMessage());
             }
         }
-        log.setLevel(Level.toLevel(props.getProperty("log.level", "INFO")));
 
-        LineInConnector lineInConnector = new LineInConnector(props.getProperty("mixer.name", "plughw:3,0"),
-                Integer.parseInt(props.getProperty("line.signalthreshold", "2000")));
+        LogManager.getRootLogger().setLevel(Level.toLevel(props.getProperty("log.level", "INFO")));
+
+        LineInConnector lineInConnector = new LineInConnector(props.getProperty("line.name", "plughw:1,0"),
+                Integer.parseInt(props.getProperty("line.signalthreshold", "3000")));
         WiringComponent.getInstance().registerAudioInput(lineInConnector);
 
         HyperionConnector hyperionConnector = new HyperionConnector(Integer.parseInt(props.getProperty("hyperion.priority", "100")),
