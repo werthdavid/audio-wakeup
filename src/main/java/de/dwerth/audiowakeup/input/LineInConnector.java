@@ -1,22 +1,10 @@
 package de.dwerth.audiowakeup.input;
 
 import de.dwerth.audiowakeup.main.WiringComponent;
-
-import java.util.Collections;
-import java.util.HashMap;
-import java.util.Iterator;
-import java.util.LinkedList;
-import java.util.List;
-import java.util.ListIterator;
-
-import javax.sound.sampled.AudioFormat;
-import javax.sound.sampled.AudioSystem;
-import javax.sound.sampled.Line;
-import javax.sound.sampled.LineUnavailableException;
-import javax.sound.sampled.Mixer;
-import javax.sound.sampled.TargetDataLine;
-
 import org.apache.log4j.Logger;
+
+import javax.sound.sampled.*;
+import java.util.*;
 
 public class LineInConnector implements IAudioInput {
 
@@ -38,15 +26,16 @@ public class LineInConnector implements IAudioInput {
     public static HashMap<String, Line> enumerateLines() {
         HashMap<String, Line> out = new HashMap<String, Line>();
         Mixer.Info[] mixerInfos = AudioSystem.getMixerInfo();
+        log.debug("Available Mixers/Lines:");
         for (Mixer.Info mixerInfo : mixerInfos) {
             log.debug("Mixer: " + mixerInfo.getName() + " " + mixerInfo.getDescription());
             Mixer m = AudioSystem.getMixer(mixerInfo);
             Line.Info[] lineInfos = m.getTargetLineInfo();
             for (Line.Info lineInfo : lineInfos) {
                 if (lineInfo.getLineClass().equals(TargetDataLine.class)) {
-                    log.debug("\tLine: " + lineInfo.toString());
+                    log.debug("- - Line: " + lineInfo.toString());
                     try {
-                        out.put(mixerInfo.getName() + ": " + lineInfo.toString(), m.getLine(lineInfo));
+                        out.put(mixerInfo.getName() + " " + mixerInfo.getDescription() + ": " + lineInfo.toString(), m.getLine(lineInfo));
                     } catch (LineUnavailableException e) {
                         log.error("Line Unavailable: " + e.getMessage());
                     }
@@ -141,6 +130,7 @@ public class LineInConnector implements IAudioInput {
         AudioFormat format = new AudioFormat(8000.0f, 16, 1, true, true);
         try {
             HashMap<String, Line> out = enumerateLines();
+            log.debug("Looking for '" + lineName + "'");
             for (String key : out.keySet()) {
                 if (key.contains(lineName)) {
                     log.info("Found Line: " + key);
