@@ -1,7 +1,9 @@
 package de.dwerth.audiowakeup.output;
 
 import de.dwerth.audiowakeup.main.WiringComponent;
+import org.apache.log4j.Logger;
 
+import java.awt.*;
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
@@ -9,8 +11,6 @@ import java.net.ConnectException;
 import java.net.Socket;
 import java.net.SocketException;
 import java.util.concurrent.locks.ReentrantLock;
-
-import org.apache.log4j.Logger;
 
 public class HyperionConnector implements IWakeupOutput {
 
@@ -27,11 +27,19 @@ public class HyperionConnector implements IWakeupOutput {
     private int priority;
     private String serverHost;
     private int serverPort;
+    private int colorH;
+    private int colorS;
+    private int colorB;
 
-    public HyperionConnector(int priority, String serverHost, int serverPort) {
+    public HyperionConnector(int priority, String serverHost, int serverPort, int colorR, int colorG, int colorB) {
         this.priority = priority;
         this.serverHost = serverHost;
         this.serverPort = serverPort;
+        float[] hsb = Color.RGBtoHSB(colorR, colorG, colorB, null);
+        this.colorH = (int) hsb[0];
+        this.colorS = (int) hsb[1];
+        this.colorB = (int) hsb[2];
+
         getConnectionThread().start();
         if (log.isDebugEnabled()) {
             getOutputThread().start();
@@ -44,9 +52,11 @@ public class HyperionConnector implements IWakeupOutput {
     }
 
     public void increaseBrightness() {
-        if (brightness < 255) {
+        if (brightness < colorB) {
             brightness += 1;
-            send("{ \"color\": [" + brightness + "," + brightness + "," + brightness + "], \"command\": \"color\", \"priority\": " + priority + " }");
+            Color col = new Color(Color.HSBtoRGB(colorH, colorS, brightness));
+            send("{ \"color\": [" + col.getRed() + "," + col.getBlue() + "," + col.getGreen() + "], " +
+                    "\"command\": \"color\", \"priority\": " + priority + " }");
         }
     }
 
