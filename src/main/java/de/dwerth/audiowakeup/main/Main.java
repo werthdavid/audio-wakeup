@@ -5,14 +5,13 @@ import de.dwerth.audiowakeup.input.LineInConnector;
 import de.dwerth.audiowakeup.output.CmdConnector;
 import de.dwerth.audiowakeup.output.HyperionConnector;
 import de.dwerth.audiowakeup.output.IFTTTConnector;
+import org.apache.log4j.Level;
+import org.apache.log4j.LogManager;
+import org.apache.log4j.Logger;
 
 import java.io.File;
 import java.io.FileInputStream;
 import java.util.Properties;
-
-import org.apache.log4j.Level;
-import org.apache.log4j.LogManager;
-import org.apache.log4j.Logger;
 
 public class Main {
 
@@ -24,6 +23,12 @@ public class Main {
         Properties props = new Properties();
 
         File propsFile = new File("audio-wakeup.properties");
+        if (args.length > 0) {
+            if (new File(args[0]).exists()) {
+                propsFile = new File(args[0]);
+            }
+        }
+
         if (propsFile.exists()) {
             try {
                 FileInputStream fis = new FileInputStream(propsFile);
@@ -41,7 +46,9 @@ public class Main {
         WiringComponent.getInstance().registerAudioInput(lineInConnector);
 
         HyperionConnector hyperionConnector = new HyperionConnector(Integer.parseInt(props.getProperty("hyperion.priority", "100")),
-                props.getProperty("hyperion.host", "localhost"), Integer.parseInt(props.getProperty("hyperion.port", "19444")));
+                props.getProperty("hyperion.host", "localhost"), Integer.parseInt(props.getProperty("hyperion.port", "19444")),
+                Integer.parseInt(props.getProperty("hyperion.color.r", "255")), Integer.parseInt(props.getProperty("hyperion.color.g", "255")),
+                Integer.parseInt(props.getProperty("hyperion.color.b", "255")));
         WiringComponent.getInstance().registerWakeupOutput(hyperionConnector);
 
         if (props.getProperty("ifttt.makerurl") != null) {
