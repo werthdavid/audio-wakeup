@@ -42,21 +42,30 @@ tbd.
 
 # Run as Service (systemd)
 
+Download the file under src/main/resources/bin and place audio-wakeup under /usr/local/bin on your system.
+
+Make it executable:
+
+```
+sudo chmod a+x /usr/local/bin/audio-wakeup
+```
+
+
 Download the two files under src/main/resources/systemd and place audio-wakeup under /etc/default and audio-wakeup.service under /etc/systemd/system on your system.
 
 Enable and run the service:
 
 ```
-systemctl daemon-reload
-systemctl enable audio-wakeup
-systemctl start audio-wakeup
+sudo systemctl daemon-reload
+sudo systemctl enable audio-wakeup
+sudo systemctl start audio-wakeup
 ```
 
 # Configuration
 
-At this point it is not (yet) possible to start the application with params. But you can create a configuration file within the same folder:
+At this point it is not (yet) possible to start the application with other params than a configuration file:
 
-*audio-wakeup.properties*
+```java -jar audio-wakeup-1.X.X-all.jar /path/to/audio-wakeup.properties```
 
 **See audio-wakeup.example.properties**
 

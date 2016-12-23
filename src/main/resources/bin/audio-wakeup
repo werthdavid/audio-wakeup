@@ -1,0 +1,2 @@
+#!/bin/bash
+java -jar /home/pi/audio-wakeup-1.2.2-SNAPSHOT-all.jar $1
