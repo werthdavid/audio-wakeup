@@ -1,16 +1,31 @@
 package de.dwerth.audiowakeup.input;
 
 import de.dwerth.audiowakeup.main.WiringComponent;
-import org.apache.log4j.Logger;
 
-import javax.sound.sampled.*;
-import java.util.*;
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.Iterator;
+import java.util.LinkedList;
+import java.util.List;
+import java.util.ListIterator;
+import java.util.concurrent.locks.ReentrantLock;
+
+import javax.sound.sampled.AudioFormat;
+import javax.sound.sampled.AudioSystem;
+import javax.sound.sampled.Line;
+import javax.sound.sampled.LineUnavailableException;
+import javax.sound.sampled.Mixer;
+import javax.sound.sampled.TargetDataLine;
+
+import org.apache.log4j.Logger;
 
 public class LineInConnector implements IAudioInput {
 
     private static final Logger log = Logger.getLogger(LineInConnector.class);
     private static final String FOUND = "FOUND";
     private static final String NOT_FOUND = "NOT_FOUND";
+
+    private ReentrantLock signalLock = new ReentrantLock();
 
     private String lineName;
     private int signalThreshold;
@@ -47,39 +62,49 @@ public class LineInConnector implements IAudioInput {
 
     @Override
     public boolean shouldIncreaseBrightness() {
-        if (lastSignals.size() == 10) {
-            ListIterator<String> listIterator = lastSignals.listIterator(7);
-            while (listIterator.hasNext()) {
-                String signal = listIterator.next();
-                if (!signal.equals(FOUND)) {
-                    return false;
+        signalLock.lock();
+        try {
+            if (lastSignals.size() == 10) {
+                ListIterator<String> listIterator = lastSignals.listIterator(7);
+                while (listIterator.hasNext()) {
+                    String signal = listIterator.next();
+                    if (!signal.equals(FOUND)) {
+                        return false;
+                    }
                 }
+                return true;
             }
-            return true;
+        } finally {
+            signalLock.unlock();
         }
         return false;
     }
 
     public void pushSignal(String signal) {
-        if (lastSignals.size() >= 10) {
-            Iterator<String> iter = lastSignals.iterator();
-            iter.next();
-            iter.remove();
-        }
-        lastSignals.add(signal);
-        if (lastSignals.size() == 10) {
-            ListIterator<String> listIterator = lastSignals.listIterator(6);
-            String lastSignal6 = listIterator.next();
-            String lastSignal7 = listIterator.next();
-            String lastSignal8 = listIterator.next();
-            String lastSignal9 = listIterator.next();
-            if (lastSignal7.equals(lastSignal8) && lastSignal7.equals(lastSignal9) && !lastSignal7.equals(lastSignal6)) {
-                if (signal.equals(NOT_FOUND)) {
-                    WiringComponent.getInstance().triggerWakeupDone();
-                } else {
-                    WiringComponent.getInstance().triggerWakeup();
+        signalLock.lock();
+        try {
+            if (lastSignals.size() >= 10) {
+                Iterator<String> iter = lastSignals.iterator();
+                iter.next();
+                iter.remove();
+            }
+            lastSignals.add(signal);
+            if (lastSignals.size() == 10) {
+                ListIterator<String> listIterator = lastSignals.listIterator(6);
+                String lastSignal6 = listIterator.next();
+                String lastSignal7 = listIterator.next();
+                String lastSignal8 = listIterator.next();
+                String lastSignal9 = listIterator.next();
+                if (lastSignal7.equals(lastSignal8) && lastSignal7.equals(lastSignal9) && !lastSignal7.equals(lastSignal6)) {
+                    if (signal.equals(NOT_FOUND)) {
+                        WiringComponent.getInstance().triggerWakeupDone();
+                    } else {
+                        WiringComponent.getInstance().triggerWakeup();
+                    }
                 }
             }
+        } finally {
+            signalLock.unlock();
         }
     }
 
