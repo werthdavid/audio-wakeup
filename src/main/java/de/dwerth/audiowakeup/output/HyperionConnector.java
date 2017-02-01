@@ -10,7 +10,6 @@ import java.io.InputStreamReader;
 import java.net.ConnectException;
 import java.net.Socket;
 import java.net.SocketException;
-import java.util.concurrent.locks.ReentrantLock;
 
 public class HyperionConnector implements IWakeupOutput {
 
@@ -18,7 +17,7 @@ public class HyperionConnector implements IWakeupOutput {
 
     private Socket socket = null;
     private boolean connected = false;
-    private ReentrantLock lock = new ReentrantLock();
+    private Object lock = new Object();
     private int brightness = 0;
     private boolean clearCommandSent = false;
     private BufferedReader inputStreamReader = null;
@@ -63,12 +62,12 @@ public class HyperionConnector implements IWakeupOutput {
 
     public void sendClear() {
         send("{\"command\":\"clear\",\"priority\":" + priority + "}");
+        clearCommandSent = true;
         brightness = 0;
     }
 
     private void send(String command) {
-        lock.lock();
-        try {
+        synchronized (lock) {
             if (!connected) {
                 connect();
             }
@@ -84,80 +83,67 @@ public class HyperionConnector implements IWakeupOutput {
             } else {
                 log.warn("Not sending command to hyperion: not connected");
             }
-        } finally {
-            lock.unlock();
         }
     }
 
     private Thread getConnectionThread() {
-        Thread t = new Thread() {
-            public void run() {
-                while (true) {
-                    // Disconnect if inactive for more than 2 mins
-                    if (connected && System.currentTimeMillis() - lastSendTS > (2 * 60 * 1000)) {
-                        disconnect();
-                    }
-                    try {
-                        Thread.sleep(60 * 1000);
-                    } catch (InterruptedException e) {
-                        e.printStackTrace();
-                    }
+        Thread t = new Thread(() -> {
+            while (true) {
+                // Disconnect if inactive for more than 2 mins
+                if (connected && System.currentTimeMillis() - lastSendTS > (2 * 60 * 1000)) {
+                    log.info("Closing connection to Hyperion since there was nothing sent for 2 minutes");
+                    disconnect();
+                }
+                try {
+                    Thread.sleep(60 * 1000);
+                } catch (InterruptedException e) {
+                    e.printStackTrace();
                 }
             }
-        };
+        });
         return t;
     }
 
     private Thread getHandlerThread() {
-        Thread t = new Thread() {
-            public void run() {
-                while (true) {
-                    if (WiringComponent.getInstance().shouldIncreaseBrightness()) {
-                        increaseBrightness();
-                        clearCommandSent = false;
-                    } else {
-                        if (!clearCommandSent && connected) {
-                            sendClear();
-                            clearCommandSent = true;
-                            brightness = 0;
-                        }
-                    }
-                    if (socket != null && socket.isClosed()) {
-                        disconnect();
-                    }
-                    try {
-                        Thread.sleep(2000);
-                    } catch (InterruptedException e) {
-                        e.printStackTrace();
-                    }
+        Thread t = new Thread(() -> {
+            while (true) {
+                if (WiringComponent.getInstance().shouldIncreaseBrightness()) {
+                    increaseBrightness();
+                    clearCommandSent = false;
+                }
+                if (socket != null && socket.isClosed()) {
+                    disconnect();
+                }
+                try {
+                    Thread.sleep(2000);
+                } catch (InterruptedException e) {
+                    e.printStackTrace();
                 }
             }
-        };
+        });
         return t;
     }
 
     private Thread getOutputThread() {
-        Thread t = new Thread() {
-            public void run() {
-                while (true) {
-                    if (socket != null && !socket.isClosed() && connected && inputStreamReader != null) {
-                        try {
-                            log.debug("Hyperion response: " + inputStreamReader.readLine());
-                        } catch (SocketException se) {
-                            disconnect();
-                        } catch (IOException e) {
-                            log.error("IOException while reading Hyperion response: " + e.getMessage());
-                        }
-                    }
+        Thread t = new Thread(() -> {
+            while (true) {
+                if (socket != null && !socket.isClosed() && connected && inputStreamReader != null) {
                     try {
-                        Thread.sleep(1000);
-                    } catch (InterruptedException e) {
-                        e.printStackTrace();
+                        log.debug("Hyperion response: " + inputStreamReader.readLine());
+                    } catch (SocketException se) {
+                        disconnect();
+                    } catch (IOException e) {
+                        log.error("IOException while reading Hyperion response: " + e.getMessage());
                     }
                 }
-
+                try {
+                    Thread.sleep(1000);
+                } catch (InterruptedException e) {
+                    e.printStackTrace();
+                }
             }
-        };
+
+        });
         return t;
     }
 

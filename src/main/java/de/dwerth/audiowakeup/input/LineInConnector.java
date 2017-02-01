@@ -33,12 +33,14 @@ public class LineInConnector implements IAudioInput {
             Line.Info[] lineInfos = m.getTargetLineInfo();
             for (Line.Info lineInfo : lineInfos) {
                 if (lineInfo.getLineClass().equals(TargetDataLine.class)) {
-                    log.debug("- - Line: " + lineInfo.toString());
+                    log.debug("- Line: " + lineInfo.toString());
                     try {
                         out.put(mixerInfo.getName() + " " + mixerInfo.getDescription() + ": " + lineInfo.toString(), m.getLine(lineInfo));
                     } catch (LineUnavailableException e) {
                         log.error("Line Unavailable: " + e.getMessage());
                     }
+                } else {
+                    log.debug("- Ignoring Line (" + lineInfo.getLineClass().getName() + ") " + lineInfo.toString() + ": ; not an output line");
                 }
             }
         }
@@ -49,13 +51,14 @@ public class LineInConnector implements IAudioInput {
     public boolean shouldIncreaseBrightness() {
         if (lastSignals.size() == 10) {
             ListIterator<String> listIterator = lastSignals.listIterator(7);
-            while (listIterator.hasNext()) {
-                String signal = listIterator.next();
-                if (!signal.equals(FOUND)) {
-                    return false;
+            String lastSignal7 = listIterator.next();
+            String lastSignal8 = listIterator.next();
+            String lastSignal9 = listIterator.next();
+            if (lastSignal7.equals(lastSignal8) && lastSignal7.equals(lastSignal9)) {
+                if (lastSignal7.equals(FOUND)) {
+                    return true;
                 }
             }
-            return true;
         }
         return false;
     }
@@ -84,45 +87,43 @@ public class LineInConnector implements IAudioInput {
     }
 
     public Thread getHandlerThread() {
-        Thread t = new Thread() {
-            public void run() {
-                TargetDataLine targetDataLine = getLine();
-                if (targetDataLine != null) {
-                    try {
-                        targetDataLine.open();
-                    } catch (LineUnavailableException e) {
-                        log.error("Line Unavailable: " + e.getMessage());
-                    }
-                    targetDataLine.start();
-                    while (true) {
-                        byte[] buffer = new byte[2000];
-                        int bytesRead = targetDataLine.read(buffer, 0, buffer.length);
-
-                        short max;
-                        if (bytesRead >= 0) {
-                            max = (short) (buffer[0] + (buffer[1] << 8));
-                            for (int p = 2; p < bytesRead - 1; p += 2) {
-                                short thisValue = (short) (buffer[p] + (buffer[p + 1] << 8));
-                                if (thisValue > max) max = thisValue;
-                            }
-                            log.debug("Line in signal: " + max);
-                            if (max > signalThreshold) {
-                                pushSignal(FOUND);
-                            } else {
-                                pushSignal(NOT_FOUND);
-                            }
-                        }
-                        try {
-                            Thread.sleep(1000);
-                        } catch (InterruptedException e) {
-                            e.printStackTrace();
-                        }
-                    }
-                } else {
-                    log.error("No Line found!");
+        Thread t = new Thread(() -> {
+            TargetDataLine targetDataLine = getLine();
+            if (targetDataLine != null) {
+                try {
+                    targetDataLine.open();
+                } catch (LineUnavailableException e) {
+                    log.error("Line Unavailable: " + e.getMessage());
                 }
+                targetDataLine.start();
+                while (true) {
+                    byte[] buffer = new byte[2000];
+                    int bytesRead = targetDataLine.read(buffer, 0, buffer.length);
+
+                    short max;
+                    if (bytesRead >= 0) {
+                        max = (short) (buffer[0] + (buffer[1] << 8));
+                        for (int p = 2; p < bytesRead - 1; p += 2) {
+                            short thisValue = (short) (buffer[p] + (buffer[p + 1] << 8));
+                            if (thisValue > max) max = thisValue;
+                        }
+                        log.debug("Line in signal: " + max);
+                        if (max > signalThreshold) {
+                            pushSignal(FOUND);
+                        } else {
+                            pushSignal(NOT_FOUND);
+                        }
+                    }
+                    try {
+                        Thread.sleep(1000);
+                    } catch (InterruptedException e) {
+                        e.printStackTrace();
+                    }
+                }
+            } else {
+                log.error("No Line found!");
             }
-        };
+        });
         return t;
     }
 
@@ -137,10 +138,10 @@ public class LineInConnector implements IAudioInput {
                     return (TargetDataLine) out.get(key);
                 }
             }
-            log.info("Returning OS Default Line");
+            log.info("No Line selected, returning OS Default Line");
             return AudioSystem.getTargetDataLine(format);
-        } catch (LineUnavailableException e) {
-            e.printStackTrace();
+        } catch (Exception e) {
+            log.error("Could not find an input line: " + e.getMessage());
         }
         return null;
     }
